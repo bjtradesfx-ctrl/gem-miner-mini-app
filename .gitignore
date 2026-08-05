@@ -1,0 +1,15 @@
+# Security (NEVER UPLOAD THIS)
+.env
+
+# Database (Keep user data local)
+*.db
+miner_database.db
+
+# Python environments
+venv/
+env/
+__pycache__/
+*.pyc
+
+# PyCharm settings
+.idea/

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gem Miner</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #06080e;
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --accent-amethyst: #b148ff;
+            --accent-sapphire: #3b82f6;
+            --accent-emerald: #10b981;
+            --accent-ruby: #ef4444;
+            --accent-topaz: #f59e0b;
+            --accent-ton: #0098EA;
+            --accent-diamond: #e2e8f0;
+            --tg-stars: #fbbf24;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', sans-serif; user-select: none; }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Ambient Background Orbs */
+        .ambient-orb { position: absolute; border-radius: 50%; filter: blur(70px); z-index: 0; opacity: 0.4; animation: floatOrb 15s infinite alternate ease-in-out; pointer-events: none; }
+        .orb-1 { top: -10%; left: -10%; width: 350px; height: 350px; background: #b148ff; }
+        .orb-2 { bottom: 10%; right: -10%; width: 300px; height: 300px; background: #3b82f6; animation-delay: -5s; }
+        .orb-3 { top: 40%; left: 30%; width: 250px; height: 250px; background: rgba(16, 185, 129, 0.6); animation-delay: -10s; }
+
+        @keyframes floatOrb {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, 50px) scale(1.1); }
+            100% { transform: translate(-30px, 20px) scale(0.9); }
+        }
+
+        /* Glassmorphism Base Class */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+        }
+
+        /* Icons */
+        svg { width: 100%; height: 100%; }
+        .icon-sm { width: 18px; height: 18px; }
+        .icon-md { width: 22px; height: 22px; }
+        .icon-lg { width: 28px; height: 28px; }
+
+        /* Main Wrapper to sit above background orbs */
+        #main-wrapper { position: relative; z-index: 10; display: flex; flex-direction: column; height: 100%; width: 100%; }
+
+        /* Navigation Header / Top Bar */
+        .top-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px 5px 20px; }
+        .brand-title { font-size: 18px; font-weight: 900; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .top-balance-badge { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: 20px; display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 16px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); transition: transform 0.15s ease; color: var(--accent-amethyst); }
+        .top-balance-badge span { color: var(--text-main); }
+
+        /* Content Areas */
+        .content { flex: 1; padding: 15px 20px 20px 20px; overflow-y: auto; display: none; padding-bottom: 110px; }
+        .content.active { display: block; animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+
+        /* Typography */
+        h1 { font-size: 28px; font-weight: 900; margin-bottom: 5px; text-align: center; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        p.subtitle { color: var(--text-muted); text-align: center; margin-bottom: 20px; font-size: 14px; font-weight: 400; }
+        .section-title { font-size: 18px; font-weight: 900; margin: 40px 0 15px 0; display: flex; align-items: center; gap: 10px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+
+        /* Level Bar System */
+        .level-container { padding: 18px; margin-top: 10px; margin-bottom: 20px; transition: transform 0.15s ease; }
+        .level-header { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+        .level-header .rank { color: var(--accent-amethyst); text-shadow: 0 0 10px rgba(177, 72, 255, 0.5); }
+        .progress-bar { height: 12px; background: rgba(0,0,0,0.4); border-radius: 10px; overflow: hidden; position: relative; border: 1px solid rgba(255,255,255,0.05); }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #c084fc, var(--accent-amethyst)); border-radius: 10px; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 15px var(--accent-amethyst); }
+
+        /* Gamified Mine Area */
+        .mining-area { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; margin-top: 25px; }
+        .points-display { font-size: 46px; font-weight: 900; margin-bottom: 30px; text-shadow: 0 0 25px rgba(177, 72, 255, 0.6); }
+        .speed-indicator { color: var(--accent-emerald); font-size: 14px; font-weight: 700; position: absolute; right: 0; top: 0; display: flex; align-items: center; gap: 4px; background: rgba(16, 185, 129, 0.1); padding: 5px 10px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        .gem-container { position: relative; width: 190px; height: 190px; display: flex; justify-content: center; align-items: center; }
+        .gem { width: 135px; height: 135px; background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05)); backdrop-filter: blur(10px); border-radius: 25%; transform: rotate(45deg); box-shadow: 0 0 50px rgba(177, 72, 255, 0.4), inset 0 0 20px rgba(255,255,255,0.3); transition: transform 0.05s ease, box-shadow 0.2s ease; cursor: pointer; position: relative; z-index: 10; border: 2px solid rgba(255,255,255,0.5); }
+
+        /* The inner crystal glow */
+        .gem::before { content: ''; position: absolute; inset: 10px; border-radius: 20%; background: linear-gradient(135deg, #e9d5ff, var(--accent-amethyst), #7e22ce); box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
+
+        .gem:active { transform: rotate(45deg) scale(0.92); box-shadow: 0 0 20px rgba(177, 72, 255, 0.6); }
+        .gem.auto-mining { animation: floatGem 3s ease-in-out infinite; }
+
+        @keyframes floatGem { 0% { transform: rotate(45deg) translateY(0px); } 50% { transform: rotate(45deg) translateY(-12px); box-shadow: 0 0 80px rgba(177, 72, 255, 0.8); } 100% { transform: rotate(45deg) translateY(0px); } }
+
+        /* Continuous Particle Rush Effect */
+        .particle-stream { position: fixed; width: 8px; height: 8px; background: #ffffff; border-radius: 50%; transform: rotate(45deg); pointer-events: none; z-index: 9999; }
+
+        /* Floating Tap Numbers */
+        .floating-text { position: absolute; color: white; font-weight: 900; font-size: 26px; pointer-events: none; animation: floatUp 1s ease-out forwards; z-index: 20; text-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-80px) scale(1.5); } }
+
+        /* Buttons & Cards */
+        .btn-primary { background: linear-gradient(135deg, #a855f7, #6366f1); border: none; color: white; padding: 18px 30px; border-radius: 30px; font-size: 16px; font-weight: 900; width: 100%; cursor: pointer; margin-top: 35px; box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4); text-transform: uppercase; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-primary:active { transform: scale(0.96); box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); }
+
+        .btn-primary.active-miner { background: linear-gradient(135deg, var(--accent-emerald), #059669); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4); }
+        .btn-ton { background: linear-gradient(135deg, var(--accent-ton), #0076B6); color: white; width: 100%; padding: 16px; border-radius: 18px; border: none; font-weight: 700; font-size: 16px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; box-shadow: 0 8px 25px rgba(0, 152, 234, 0.4); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; }
+        .btn-ton:active { transform: scale(0.96); }
+
+        .card { padding: 18px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: transform 0.2s, background 0.3s; }
+        .card:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.08); }
+        .card-info h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; text-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .card-info p { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+        .btn-action { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 18px; border-radius: 12px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 6px; backdrop-filter: blur(5px); transition: background 0.2s; }
+        .btn-action:active { background: rgba(255,255,255,0.2); }
+
+        /* Profile Avatar */
+        .avatar-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; margin-top: 10px; }
+        .avatar { width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05)); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; font-size: 36px; font-weight: 900; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 15px; position: relative; }
+        .avatar::before { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-amethyst), var(--accent-sapphire)); z-index: -1; }
+        .profile-name { font-size: 24px; font-weight: 900; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+
+        /* Inputs */
+        input[type="number"], input[type="text"] { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: white; padding: 16px; border-radius: 15px; font-size: 16px; margin-bottom: 15px; outline: none; font-weight: 700; transition: border 0.3s, background 0.3s; }
+        input[type="number"]:focus, input[type="text"]:focus { border-color: var(--accent-amethyst); background: rgba(0,0,0,0.4); }
+
+        /* Navigation (Glass Bottom Bar) */
+        .navbar { background: rgba(10, 12, 20, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); display: flex; justify-content: space-between; padding: 15px 20px; border-top: 1px solid var(--glass-border); position: fixed; bottom: 0; width: 100%; z-index: 100; padding-bottom: calc(15px + env(safe-area-inset-bottom)); box-shadow: 0 -10px 30px rgba(0,0,0,0.3); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-muted); font-size: 11px; font-weight: 700; cursor: pointer; gap: 8px; transition: color 0.2s ease, transform 0.2s ease; flex: 1; }
+        .nav-item.active { color: var(--accent-amethyst); transform: translateY(-4px); }
+        .nav-icon { width: 24px; height: 24px; color: currentColor; transition: 0.2s; }
+        .nav-item.active .nav-icon { filter: drop-shadow(0 0 10px rgba(177, 72, 255, 0.8)); }
+
+        .pulse-target { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <!-- Ambient Animated Background -->
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+
+    <div id="main-wrapper">
+        <!-- TOP PERMANENT HEADER -->
+        <div class="top-header">
+            <div class="brand-title">
+                <div class="icon-sm" style="color: var(--accent-amethyst); filter: drop-shadow(0 0 5px var(--accent-amethyst));">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"></path><path d="M11 3 8 9l4 13"></path><path d="M13 3l3 6-4 13"></path><path d="M2 9h20"></path></svg>
+                </div>
+                GEM MINER
+            </div>
+            <div class="top-balance-badge" id="topRightCounter">
+                <div class="icon-sm">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"></path></svg>
+                </div>
+                <span id="topRightPoints">0.00</span>
+            </div>
+        </div>
+
+        <!-- MINE TAB -->
+        <div id="mine" class="content active">
+
+            <div class="level-container glass-panel" id="levelBarContainer">
+                <div class="level-header">
+                    <span>LVL <span id="currentLevelDisplay">1</span> - <span class="rank" id="rankDisplay">Amethyst</span></span>
+                    <span style="color: var(--text-muted)"><span id="pointsNeededDisplay">100</span> to next</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar"></div>
+                </div>
+            </div>
+
+            <div class="mining-area">
+                <div class="speed-indicator glass-panel" id="autoSpeedDisplay" style="display: none; padding: 6px 12px;">
+                    <div class="icon-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+                    <span id="speedValue">0.2</span>/sec
+                </div>
+
+                <div class="points-display" id="totalPoints">0.00</div>
+
+                <div class="gem-container" onclick="tapGem(event)">
+                    <div class="gem" id="mainGem"></div>
+                </div>
+
+                <button class="btn-primary" id="autoMineBtn" onclick="toggleAutoMiner()">
+                    <div class="icon-md" id="autoMineIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg></div>
+                    <span id="autoMineText">Activate 1H Auto-Miner</span>
+                </button>
+            </div>
+
+            <div class="mine-tasks-section">
+                <div class="section-title">
+                    <div class="icon-md"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
+                    Daily Missions & Boosts
+                </div>
+
+                <div class="card glass-panel">
+                    <div class="card-info">
+                        <h3>Join Alpha Channel</h3>
+                        <p style="color: var(--accent-amethyst);">+500 Points</p>
+                    </div>
+                    <button class="btn-action" onclick="claimTask(500, this)">Claim</button>
+                </div>
+                <div class="card glass-panel">
+                    <div class="card-info">
+                        <h3>Follow on X</h3>
+                        <p style="color: var(--accent-amethyst);">+300 Points</p>
+                    </div>
+                    <button class="btn-action" onclick="claimTask(300, this)">Claim</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROFILE TAB -->
+        <div id="profile" class="content">
+            <div class="avatar-container">
+                <div class="avatar" id="profileAvatar">U</div>
+                <h2 class="profile-name" id="profileUsername">@username</h2>
+            </div>
+
+            <div class="level-container glass-panel" style="margin-bottom: 15px;">
+                <div class="level-header" style="margin-bottom: 0; align-items: center;">
+                    <span style="color: var(--text-muted); font-size: 16px;">Current Rank</span>
+                    <span class="rank" id="profileRank" style="font-size: 20px; font-weight: 900;">Amethyst</span>
+                </div>
+            </div>
+
+            <div class="card glass-panel">
+                <div class="card-info">
+                    <p>Lifetime Mined</p>
+                    <h3 id="profileLifetimePoints" style="font-size: 24px; margin-top: 5px;">0.00</h3>
+                </div>
+                <div class="icon-lg" style="color: var(--accent-amethyst); filter: drop-shadow(0 0 10px var(--accent-amethyst));"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l4 6-10 13L2 9Z"></path></svg></div>
+            </div>
+
+            <div class="card glass-panel">
+                <div class="card-info">
+                    <p>Total Referrals</p>
+                    <h3 style="font-size: 24px; margin-top: 5px;">0</h3>
+                </div>
+                <div class="icon-lg" style="color: var(--text-main);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
+            </div>
+        </div>
+
+        <!-- SHOP TAB (EXPANDED TO 7 BOOSTERS) -->
+        <div id="shop" class="content">
+            <h1>Booster Shop</h1>
+            <p class="subtitle">Multiply your tap and auto-mining speed</p>
+
+            <div class="card glass-panel">
+                <div class="card-info">
+                    <h3 style="color: #cbd5e1;">Quartz Pickaxe</h3>
+                    <p>1.5x Speed • 15 Mins</p>
+                </div>
+                <button class="btn-action" style="color: var(--tg-stars); border-color: rgba(251, 191, 36, 0.4);">
+                    <div class="icon-sm"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div> 20
+                </button>
+            </div>
+
+            <div class="card glass-panel">
+                <div class="card-info">
+                    <h3 style="color: var(--accent-sapphire);">Sapphire Core</h3>
+                    <p>2x Speed • 30 Mins</p>
+                </div>
+                <button class="btn-action" style="color: var(--tg-stars); border-color: rgba(251, 191, 36, 0.4);">
+                    <div class="icon-sm"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div> 50
+                </button>
+            </div>
+
+            <div class="card glass-panel">
+                <div class="card-info">
+                    <h3 style="color: var(--accent-topaz);">Topaz Reactor</h3>
+                    <p>3x Speed • 1 Hour</p>
+                </div>
+                <button class="btn-action" style="color: var(--tg-stars); border-color: rgba(251, 191, 36, 0.4);">
+                    <div class="icon-sm"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div> 75
+                </button>
+            </div>
+
+            <div class="card glass-panel">
+                <div class="card-info">
+                    <h3 style="color: var(--accent-emerald);">Emerald Drill</h3>
+                    <p>5x Speed • 2 Hours</p>
+                </div>
+                <button class="btn-action" style="color: var(--tg-stars); border-color: rgba(251, 191, 36, 0.4);">
+                    <div class="icon-sm"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div> 150
+                </button>
+            </div>
+
+            <div class="card glass-panel">
+                <div class="card-info">
+                    <h3 style="color: #6366f1;">Obsidian Laser</h3>
+                    <p>8x Speed • 4 Hours</p>
+                </div>
+                <button class="btn-action" style="color: var(--tg-stars); border-color: rgba(251, 191, 36, 0.4);">
+                    <div class="icon-sm"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div> 300
+                </button>
+            </div>
+
+            <div class="card glass-panel">
+                <div class="card-info">
+                    <h3 style="color: var(--accent-diamond);">Diamond Extractor</h3>
+                    <p>12x Speed • 12 Hours</p>
+                </div>
+                <button class="btn-action" style="color: var(--tg-stars); border-color: rgba(251, 191, 36, 0.4);">
+                    <div class="icon-sm"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div> 750
+                </button>
+            </div>
+
+            <div class="card glass-panel">
+                <div class="card-info">
+                    <h3 style="color: var(--accent-ruby); text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);">Antimatter Core</h3>
+                    <p>25x Speed • 24 Hours</p>
+                </div>
+                <button class="btn-action" style="color: var(--tg-stars); border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.1);">
+                    <div class="icon-sm"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div> 2000
+                </button>
+            </div>
+        </div>
+
+        <!-- REFERRALS TAB -->
+        <div id="referrals" class="content">
+            <h1>Referrals</h1>
+            <p class="subtitle">Build your mining network</p>
+
+            <div class="card glass-panel" style="flex-direction: column; gap: 15px;">
+                <div class="card-info" style="text-align: center;">
+                    <h3 style="font-size: 20px;">Invite a Friend</h3>
+                    <p style="font-size: 15px; margin-top: 5px;">Get 2,500 pts + 10% of their mining</p>
+                </div>
+                <button class="btn-primary" style="margin-top: 5px; padding: 18px;">
+                    <div class="icon-md"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></div>
+                    Copy Referral Link
+                </button>
+            </div>
+        </div>
+
+        <!-- WALLET TAB -->
+        <div id="wallet" class="content">
+            <h1>Withdraw</h1>
+            <p class="subtitle">Transfer your mined gems to TON Network</p>
+
+            <div class="level-container glass-panel" style="text-align: center;">
+                <p style="color: var(--text-muted); margin-bottom: 5px; font-weight: 700;">Available Balance</p>
+                <h2 style="font-size: 40px; font-weight: 900; color: var(--accent-ton); text-shadow: 0 0 20px rgba(0, 152, 234, 0.4);"><span id="walletBalance">0.00</span></h2>
+            </div>
+
+            <button class="btn-ton">
+                <div class="icon-md"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg></div>
+                Connect TON Wallet
+            </button>
+
+            <div class="glass-panel" style="padding: 22px; margin-top: 20px;">
+                <h3 style="margin-bottom: 18px; font-size: 16px;">Withdraw Funds</h3>
+                <input type="text" placeholder="Enter TON Address (UQ...)">
+                <input type="number" placeholder="Amount">
+                <button class="btn-primary" style="margin-top: 5px; padding: 18px;">Confirm Transfer</button>
+            </div>
+        </div>
+
+        <!-- BOTTOM NAVIGATION -->
+        <div class="navbar">
+            <div class="nav-item active" onclick="switchTab('mine', this)">
+                <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="14 2 18 6 7 17 3 17 3 13 14 2"></polygon><line x1="3" y1="21" x2="9" y2="15"></line></svg></div>
+                <span>Mine</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('shop', this)">
+                <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+                <span>Boosts</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('referrals', this)">
+                <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
+                <span>Referrals</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('wallet', this)">
+                <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg></div>
+                <span>Wallet</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('profile', this)">
+                <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
+                <span>Profile</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+
+        // Game State Variables
+        let points = 0;
+        let isAutoMining = false;
+        let autoMineTimer = 0;
+        let autoMineInterval;
+        let continuousStreamInterval;
+        let tapPower = 1;
+
+        // Dynamic Level Configuration
+        const levels = [
+            { level: 1, name: "Amethyst", requirement: 0, color: "#b148ff", autoPower: 0.2 },
+            { level: 2, name: "Sapphire", requirement: 500, color: "#3b82f6", autoPower: 0.6 },
+            { level: 3, name: "Emerald",  requirement: 2000, color: "#10b981", autoPower: 1.5 },
+            { level: 4, name: "Ruby",     requirement: 10000, color: "#ef4444", autoPower: 3.5 },
+            { level: 5, name: "Diamond",  requirement: 50000, color: "#e2e8f0", autoPower: 8.0 }
+        ];
+
+        let currentLevelIndex = 0;
+
+        // Initialize Profile Info
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const username = tg.initDataUnsafe.user.username || tg.initDataUnsafe.user.first_name;
+            document.getElementById('profileUsername').innerText = `@${username}`;
+            document.getElementById('profileAvatar').innerText = username.charAt(0).toUpperCase();
+        }
+
+        function updateUI() {
+            const pointStr = points.toFixed(1);
+            document.getElementById('totalPoints').innerText = pointStr;
+            document.getElementById('topRightPoints').innerText = pointStr;
+            document.getElementById('walletBalance').innerText = pointStr;
+            document.getElementById('profileLifetimePoints').innerText = pointStr;
+
+            if (currentLevelIndex < levels.length - 1 && points >= levels[currentLevelIndex + 1].requirement) {
+                currentLevelIndex++;
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+
+            const currentLvl = levels[currentLevelIndex];
+            const nextLvl = levels[currentLevelIndex + 1] || currentLvl;
+
+            document.getElementById('currentLevelDisplay').innerText = currentLvl.level;
+
+            const rankDisplay = document.getElementById('rankDisplay');
+            rankDisplay.innerText = currentLvl.name;
+            rankDisplay.style.color = currentLvl.color;
+
+            const profileRank = document.getElementById('profileRank');
+            profileRank.innerText = currentLvl.name;
+            profileRank.style.color = currentLvl.color;
+
+            document.getElementById('speedValue').innerText = currentLvl.autoPower.toFixed(1);
+
+            if (currentLevelIndex < levels.length - 1) {
+                const pointsNeeded = nextLvl.requirement - points;
+                document.getElementById('pointsNeededDisplay').innerText = pointsNeeded.toFixed(0);
+
+                const range = nextLvl.requirement - currentLvl.requirement;
+                const progressInLevel = points - currentLvl.requirement;
+                const percentage = (progressInLevel / range) * 100;
+
+                document.getElementById('progressBar').style.width = percentage + "%";
+                document.getElementById('progressBar').style.background = `linear-gradient(90deg, rgba(255,255,255,0.2), ${currentLvl.color})`;
+                document.getElementById('progressBar').style.boxShadow = `0 0 15px ${currentLvl.color}`;
+            } else {
+                document.getElementById('pointsNeededDisplay').innerText = "MAX";
+                document.getElementById('progressBar').style.width = "100%";
+            }
+        }
+
+        function spawnSingleParticle() {
+            const gem = document.getElementById('mainGem');
+            const targetBar = document.getElementById('levelBarContainer');
+            const targetCounter = document.getElementById('topRightCounter');
+
+            const gemRect = gem.getBoundingClientRect();
+            const startX = (gemRect.left + gemRect.width / 2) + (Math.random() - 0.5) * 40;
+            const startY = (gemRect.top + gemRect.height / 2) + (Math.random() - 0.5) * 40;
+
+            const target = Math.random() > 0.5 ? targetBar : targetCounter;
+            const targetRect = target.getBoundingClientRect();
+            const endX = targetRect.left + targetRect.width / 2;
+            const endY = targetRect.top + targetRect.height / 2;
+
+            const particle = document.createElement('div');
+            particle.className = 'particle-stream';
+            particle.style.left = `${startX}px`;
+            particle.style.top = `${startY}px`;
+
+            // Generate glowing orb color based on level
+            particle.style.boxShadow = `0 0 15px ${levels[currentLevelIndex].color}, 0 0 5px ${levels[currentLevelIndex].color}`;
+
+            document.body.appendChild(particle);
+
+            const animation = particle.animate([
+                { transform: 'translate(-50%, -50%) scale(1) rotate(45deg)', opacity: 1 },
+                { transform: `translate(${endX - startX}px, ${endY - startY}px) scale(0.2) rotate(180deg)`, opacity: 0 }
+            ], {
+                duration: 500 + Math.random() * 200,
+                easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
+            });
+
+            animation.onfinish = () => {
+                particle.remove();
+                target.classList.add('pulse-target');
+                setTimeout(() => target.classList.remove('pulse-target'), 150);
+            };
+        }
+
+        function spawnTapStream() {
+            let count = 0;
+            const maxParticles = 6;
+            const burstInterval = setInterval(() => {
+                spawnSingleParticle();
+                count++;
+                if (count >= maxParticles) clearInterval(burstInterval);
+            }, 30);
+        }
+
+        function tapGem(event) {
+            tg.HapticFeedback.impactOccurred('medium');
+            points += tapPower;
+            updateUI();
+            spawnTapStream();
+
+            const container = document.querySelector('.gem-container');
+            const tapEffect = document.createElement('div');
+            tapEffect.classList.add('floating-text');
+            tapEffect.innerText = `+${tapPower}`;
+
+            const offsetX = (Math.random() - 0.5) * 60;
+            const offsetY = (Math.random() - 0.5) * 60;
+
+            tapEffect.style.left = `calc(50% + ${offsetX}px)`;
+            tapEffect.style.top = `calc(50% + ${offsetY}px)`;
+
+            container.appendChild(tapEffect);
+            setTimeout(() => tapEffect.remove(), 1000);
+        }
+
+        function stopAutoMiner() {
+            isAutoMining = false;
+            clearInterval(autoMineInterval);
+            clearInterval(continuousStreamInterval);
+
+            const btn = document.getElementById('autoMineBtn');
+            btn.classList.remove('active-miner');
+            document.getElementById('autoMineIcon').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>`;
+            document.getElementById('autoMineText').innerText = "Activate 1H Auto-Miner";
+
+            document.getElementById('autoSpeedDisplay').style.display = 'none';
+            document.getElementById('mainGem').classList.remove('auto-mining');
+            tg.HapticFeedback.notificationOccurred('warning');
+        }
+
+        function toggleAutoMiner() {
+            if (isAutoMining) return;
+
+            isAutoMining = true;
+            autoMineTimer = 3600;
+            tg.HapticFeedback.impactOccurred('heavy');
+
+            const btn = document.getElementById('autoMineBtn');
+            btn.classList.add('active-miner');
+            document.getElementById('autoSpeedDisplay').style.display = 'flex';
+            document.getElementById('mainGem').classList.add('auto-mining');
+
+            document.getElementById('autoMineIcon').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+
+            autoMineInterval = setInterval(() => {
+                autoMineTimer--;
+                points += levels[currentLevelIndex].autoPower;
+                updateUI();
+
+                const m = Math.floor(autoMineTimer / 60).toString().padStart(2, '0');
+                const s = (autoMineTimer % 60).toString().padStart(2, '0');
+                document.getElementById('autoMineText').innerText = `Mining... ${m}:${s}`;
+
+                if (autoMineTimer <= 0) stopAutoMiner();
+            }, 1000);
+
+            continuousStreamInterval = setInterval(() => {
+                spawnSingleParticle();
+            }, 150);
+        }
+
+        function claimTask(rewardPoints, buttonEl) {
+            tg.HapticFeedback.notificationOccurred('success');
+            points += rewardPoints;
+            updateUI();
+
+            let count = 0;
+            const taskBurst = setInterval(() => {
+                spawnSingleParticle();
+                count++;
+                if (count >= 15) clearInterval(taskBurst);
+            }, 30);
+
+            buttonEl.innerHTML = `<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Done`;
+            buttonEl.disabled = true;
+            buttonEl.style.opacity = "0.4";
+            buttonEl.style.background = "rgba(16, 185, 129, 0.2)";
+            buttonEl.style.borderColor = "transparent";
+        }
+
+        function switchTab(tabId, element) {
+            tg.HapticFeedback.selectionChanged();
+            document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
