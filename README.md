@@ -8,14 +8,9 @@ Master Miner is a Telegram Mini App that allows users to mine points or tokens a
 
 - `Python`
 - `HTML5`
-- `CSS3`
-- `JavaScript`
 - `Telegram Mini Apps SDK`
 - `Telegram Bot API`
-- `SQLite / PostgreSQL`
-- `REST API`
-- `Git`
-- `GitHub`
+
 
 ---
 
