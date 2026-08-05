@@ -116,16 +116,6 @@ To run the project in your local environment, follow these steps:
 
 ### 🍿 Video / Screenshots
 
-> **Demo Video:** *(Insert your video link here)*
+> **Demo Video:** *(https://t.me/miniapplovers/8)*
 
-> **Application Screenshots:** *(Drop your screenshots below)*
 
-```text
-📷 Screenshot 1
-
-📷 Screenshot 2
-
-📷 Screenshot 3
-
-📷 Screenshot 4
-```
